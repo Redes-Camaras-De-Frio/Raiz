@@ -1,0 +1,6 @@
+[submodule "Capa_de_Datos"]
+	path = Capa_de_Datos
+	url = git@github.com:Redes-Camaras-De-Frio/Capa-De-Datos.git
+[submodule "Capa_de_Aplicacion"]
+	path = Capa_de_Aplicacion
+	url = git@github.com:Redes-Camaras-De-Frio/Capa-De-Aplicacion.git

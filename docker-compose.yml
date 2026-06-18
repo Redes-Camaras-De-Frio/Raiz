@@ -1,0 +1,21 @@
+name: monitoreocf
+
+# ══════════════════════════════════════════════════════════════════════
+#  MonitoreoCF — Sistema de Monitoreo de Cadena de Frío
+#  Punto de entrada único del proyecto.
+#  Cada capa se activa aquí cuando su implementación está lista.
+# ══════════════════════════════════════════════════════════════════════
+
+# ── Capa de Datos ✓ (activa) ──────────────────────────────────────────
+#    PostgreSQL 15  →  localhost:5432
+#    pgAdmin 4      →  http://localhost:5050  (admin@farmacia.com / admin123)
+# ── Capa de Aplicación ✓ (activa) ────────────────────────────────────
+#    API Node.js / Express  →  http://localhost:3000
+include:
+  - path: ./Capa_de_Datos/docker-compose.yml
+  - path: ./Capa_de_Aplicacion/docker-compose.yml
+
+# ── Capa de Presentación ✗ (pendiente) ───────────────────────────────
+#    Dashboard HTML/CSS/JS  →  http://localhost:8080
+# include:
+#   - path: ./Capa_de_Presentacion/docker-compose.yml

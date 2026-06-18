@@ -1,0 +1,257 @@
+══════════════════════════════════════════════════════════════════════
+  GUÍA DE COMANDOS — CAPA DE DATOS
+  Sistema de Monitoreo de Cadena de Frío (MonitoreoCF)
+══════════════════════════════════════════════════════════════════════
+
+Requisitos previos:
+  - Docker Desktop instalado y corriendo
+  - Node.js instalado (para el simulador)
+  - Conexión a internet (primera vez, para descargar las imágenes)
+
+NOTA IMPORTANTE — Puerto de PostgreSQL:
+  El contenedor usa el puerto 5433 en tu máquina (no 5432).
+  Motivo: hay un PostgreSQL local de Windows corriendo en el 5432
+  que genera conflicto. El puerto interno del contenedor sigue
+  siendo 5432; solo cambia el acceso desde afuera.
+
+──────────────────────────────────────────────────────────────────────
+PASO 1 — Ir a la carpeta RAÍZ del proyecto
+──────────────────────────────────────────────────────────────────────
+
+  cd D:\TB2_Redes
+
+  IMPORTANTE: todos los comandos de Docker deben ejecutarse desde
+  esta carpeta raíz, no desde subcarpetas.
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 2 — Levantar los contenedores
+──────────────────────────────────────────────────────────────────────
+
+  docker compose up -d
+
+  Qué hace:
+    - Descarga las imágenes postgres:15-alpine y pgadmin4 (solo la primera vez)
+    - Crea la base de datos "cadena_frio"
+    - Ejecuta automáticamente 01_schema.sql (crea las tablas)
+    - Ejecuta automáticamente 02_seed.sql (inserta datos iniciales)
+    - Levanta pgAdmin en http://localhost:5050
+
+  Esperar unos 20-30 segundos antes de continuar.
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 3 — Verificar que los contenedores estén corriendo
+──────────────────────────────────────────────────────────────────────
+
+  docker compose ps
+
+  Deberías ver dos contenedores con STATUS = "healthy" o "running":
+    - cadena_frio_db       (PostgreSQL)
+    - cadena_frio_pgadmin  (pgAdmin)
+
+  Si alguno dice "starting", espera 10 segundos y vuelve a ejecutar.
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 4 — Verificar la base de datos por consola (psql)
+──────────────────────────────────────────────────────────────────────
+
+  Entrar al contenedor de PostgreSQL (el puerto no importa aquí,
+  se accede directo al contenedor):
+
+    docker exec -it cadena_frio_db psql -U postgres -d cadena_frio
+
+  Ya estás dentro de PostgreSQL. Ahora prueba estos comandos:
+
+  -- Ver todas las tablas creadas:
+    \dt
+
+  -- Ver los datos de cada tabla:
+    SELECT * FROM sedes;
+    SELECT * FROM camaras;
+    SELECT * FROM sensores;
+    SELECT * FROM usuarios;
+
+  -- Contar cuántos sensores hay en total:
+    SELECT COUNT(*) FROM sensores;
+
+  -- Ver sensores con su cámara y sede:
+    SELECT se.nombre AS sede, c.nombre AS camara, s.tipo, s.unidad
+    FROM sensores s
+    JOIN camaras c ON s.camara_id = c.id
+    JOIN sedes se ON c.sede_id = se.id
+    ORDER BY se.id, c.id, s.id;
+
+  -- Salir de psql:
+    \q
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 5 — Verificar la base de datos desde pgAdmin (interfaz visual)
+──────────────────────────────────────────────────────────────────────
+
+  1. Abrir el navegador y entrar a:
+       http://localhost:5050
+
+  2. Iniciar sesión con:
+       Email:    admin@farmacia.com
+       Password: admin123
+
+  3. Registrar el servidor de PostgreSQL:
+       - Clic en "Add New Server"
+       - Pestaña "General":
+           Name: cadena_frio  (cualquier nombre)
+       - Pestaña "Connection":
+           Host:     cadena_frio_db
+           Port:     5432           <- puerto INTERNO del contenedor
+           Database: cadena_frio
+           Username: postgres
+           Password: postgres
+       - Clic en "Save"
+
+  4. Navegar a:
+       Servers > cadena_frio > Databases > cadena_frio > Schemas > public > Tables
+
+     Deberías ver las 6 tablas: alertas, camaras, lecturas, sedes, sensores, usuarios.
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 6 — Instalar dependencias del simulador (solo la primera vez)
+──────────────────────────────────────────────────────────────────────
+
+  cd D:\TB2_Redes\Capa_de_Datos\simulacion
+
+  npm install
+
+  Esto instala: dotenv y pg (cliente de PostgreSQL para Node.js)
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 7 — Verificar el archivo .env del simulador
+──────────────────────────────────────────────────────────────────────
+
+  El archivo .env ya existe en:
+    D:\TB2_Redes\Capa_de_Datos\simulacion\.env
+
+  Debe contener exactamente esto (ya configurado):
+    DB_HOST=localhost
+    DB_PORT=5433        <- puerto EXTERNO (evita conflicto con PG local)
+    DB_NAME=cadena_frio
+    DB_USER=postgres
+    DB_PASSWORD=postgres
+    INTERVALO_SEG=10
+
+  Para verificarlo:
+    type D:\TB2_Redes\Capa_de_Datos\simulacion\.env
+
+  Si por algún motivo no existe, crearlo desde la carpeta simulacion:
+    copy .env.example .env
+  Y luego editar DB_PORT=5432 cambiándolo a DB_PORT=5433.
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 8 — Correr el simulador de sensores IoT
+──────────────────────────────────────────────────────────────────────
+
+  cd D:\TB2_Redes\Capa_de_Datos\simulacion
+
+  npm start
+
+  Verás en consola algo como:
+
+    Conexión a PostgreSQL establecida.
+    Simulación iniciada — intervalo: 10s
+    Presiona Ctrl+C para detener.
+
+    [2026-06-07T20:00:00.000Z] — 19 sensores activos
+    ────────────────────────────────────────────────────────────
+      ✓  [Farmacia Central / Cámara Farmacia Central] temperatura: 5.43 °C
+      ✓  [Farmacia Central / Cámara Farmacia Central] humedad: 58.21 %
+      ✓  [Farmacia Central / Cámara Farmacia Central] apertura: 0 bool
+      ⚠  [Distribuidora Norte / Cámara Grande 1] Temperatura alta: 9.12°C (máx. permitido: 8°C)
+      ...
+
+  Iconos:
+    ✓  = lectura normal, guardada en la tabla "lecturas"
+    ⚠  = valor fuera de rango, guardada también en "alertas"
+
+  Para detener: Ctrl + C
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 9 — Verificar que el simulador está guardando datos
+──────────────────────────────────────────────────────────────────────
+
+  Abrir otra terminal y ejecutar:
+
+    docker exec -it cadena_frio_db psql -U postgres -d cadena_frio
+
+  -- Ver las últimas 10 lecturas:
+    SELECT l.id, s.tipo, l.valor, l.registrado_en
+    FROM lecturas l
+    JOIN sensores s ON l.sensor_id = s.id
+    ORDER BY l.registrado_en DESC
+    LIMIT 10;
+
+  -- Ver alertas generadas:
+    SELECT a.tipo, a.mensaje, a.creado_en
+    FROM alertas a
+    ORDER BY a.creado_en DESC
+    LIMIT 10;
+
+  -- Contar totales:
+    SELECT COUNT(*) AS total_lecturas FROM lecturas;
+    SELECT COUNT(*) AS total_alertas  FROM alertas;
+
+  -- Salir:
+    \q
+
+
+──────────────────────────────────────────────────────────────────────
+PASO 10 — Detener los contenedores (cuando termines)
+──────────────────────────────────────────────────────────────────────
+
+  SIEMPRE desde la carpeta raíz:
+
+    cd D:\TB2_Redes
+    docker compose down
+
+  Este comando detiene los contenedores pero CONSERVA los datos
+  (volumen monitoreocf_postgres_data).
+
+  Si quieres borrar TODO (datos incluidos) para empezar de cero:
+
+    docker compose down -v
+
+  Si quedara algún contenedor huérfano (error de nombre en uso):
+
+    docker rm -f cadena_frio_db cadena_frio_pgadmin
+    docker compose up -d
+
+
+──────────────────────────────────────────────────────────────────────
+RESUMEN DE ACCESOS
+──────────────────────────────────────────────────────────────────────
+
+  PostgreSQL (desde Node.js o cliente externo):
+    Host:           localhost
+    Puerto externo: 5433        <- usar este desde fuera del contenedor
+    Puerto interno: 5432        <- usar este dentro de la red Docker
+    Base de datos:  cadena_frio
+    Usuario:        postgres
+    Contraseña:     postgres
+
+  pgAdmin (web):        http://localhost:5050
+    Email:              admin@farmacia.com
+    Contraseña:         admin123
+    Host del servidor:  cadena_frio_db  (nombre interno del contenedor)
+    Puerto:             5432            (puerto interno)
+
+  Usuarios de la app (en tabla usuarios):
+    admin@farmacia.com    / rol: admin
+    operador@farmacia.com / rol: operador
+    tecnico@farmacia.com  / rol: tecnico
+    (todos con password de prueba: admin123)
+
+══════════════════════════════════════════════════════════════════════
