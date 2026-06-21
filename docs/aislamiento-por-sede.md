@@ -21,7 +21,7 @@ CREATE TABLE usuario_sede (
 | Rol | `usuario_sede` | Comportamiento |
 |---|---|---|
 | `admin` | Sin registros (tabla vacía para ese usuario) | Acceso total a **todas** las sedes |
-| `operador` / `tecnico` | 1 o más registros | Acceso **solo** a las sedes listadas |
+| `operador` | 1 o más registros | Acceso **solo** a las sedes listadas |
 
 ### 1.3 Seed modificado
 
@@ -29,8 +29,7 @@ CREATE TABLE usuario_sede (
 -- Admin no se inserta en usuario_sede (acceso total)
 
 INSERT INTO usuario_sede (usuario_id, sede_id) VALUES
-    (2, 1),   -- Operador Central → Farmacia Central
-    (3, 2);   -- Técnico → Distribuidora Norte
+    (2, 1);   -- Operador Central → Farmacia Central
 ```
 
 ---
@@ -50,7 +49,7 @@ El token incluye el listado de sedes del usuario:
 ```
 
 - admin: `"sedes": null` (significa "todas")
-- operador/técnico: `"sedes": [1, 3, 5]`
+- operador: `"sedes": [1, 3, 5]`
 
 ### 2.1 Login
 
